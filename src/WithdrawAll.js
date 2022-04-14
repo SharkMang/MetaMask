@@ -109,6 +109,7 @@ const withdrawMoneyFromBiggestBallance = async () => {
   console.log(2)
 
   const networkNamesArr = getNetworkNamesArr()
+
   const biggestBalance = await getBiggestBalance(networkNamesArr)
   await changeNetwork(biggestBalance.networkName)
   await window.ethereum.send('eth_requestAccounts')
